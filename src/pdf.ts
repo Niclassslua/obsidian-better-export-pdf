@@ -400,7 +400,9 @@ export function makePrintOptions(
   }
   const printOptions: electron.PrintToPDFOptions = {
     landscape: config?.["landscape"],
-    printBackground: config?.["printBackground"],
+    // A dark page is itself a print background. Without this Chromium drops
+    // the @page fill and leaves the physical PDF sheet white.
+    printBackground: config?.exportTheme === "dark" || config?.["printBackground"],
     generateTaggedPDF: config?.["generateTaggedPDF"],
     pageSize,
     scale: scale / 100,
@@ -450,6 +452,31 @@ export function makePrintOptions(
   return printOptions;
 }
 
+/**
+ * Webview counterpart of render.ts's applyPrintPageBackgroundStyle: fill the
+ * PDF page box for dark exports. Unlike styling the rendered note, @page also
+ * covers the sheet area exposed by print margins.
+ */
+export async function applyPrintPageBackground(webview: WebviewTag, theme: "light" | "dark"): Promise<void> {
+  await webview.executeJavaScript(`(() => {
+    const styleId = "better-export-pdf-page-background";
+    document.getElementById(styleId)?.remove();
+    if (${JSON.stringify(theme)} !== "dark") return;
+
+    const probe = document.createElement("span");
+    probe.style.cssText = "position:fixed;visibility:hidden;background-color:var(--background-primary, #1e1e1e)";
+    document.body.appendChild(probe);
+    const pageColor = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.media = "print";
+    style.textContent = "@page { background-color: " + pageColor + " !important; }";
+    document.head.appendChild(style);
+  })()`);
+}
+
 export async function exportToPDF(
   outputFile: string,
   config: ExportConfigType & BetterExportPdfPluginSettings,
@@ -459,6 +486,7 @@ export async function exportToPDF(
   console.debug("output pdf:", outputFile);
 
   const printOptions = makePrintOptions(config, frontMatter);
+  await applyPrintPageBackground(w, config.exportTheme ?? "light");
 
   try {
     let data = await w.printToPDF(printOptions);

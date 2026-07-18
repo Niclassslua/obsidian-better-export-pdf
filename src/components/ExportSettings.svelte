@@ -2,6 +2,7 @@
   import type BetterExportPdfPlugin from "../main";
   import type { ExportConfigType, ExportConfigModal } from "../modal";
   import { settingToggle, settingDropdown, settingSlider, settingButton, settingDoubleText } from "../actions";
+  import { setExportTheme } from "../render";
 
   let {
     modal,
@@ -60,6 +61,23 @@
       onChange: (value) => {
         config.showTitle = value;
         pdfPreview?.toggleTitle(value);
+      },
+    }}
+  ></div>
+
+  <!-- Export Theme -->
+  <div
+    use:settingDropdown={{
+      name: "Export theme",
+      desc: "Theme applied to the exported PDF.",
+      options: { light: "Light", dark: "Dark" },
+      value: settings.exportTheme ?? "light",
+      onChange: async (value) => {
+        const theme = value === "dark" ? "dark" : "light";
+        plugin.settings.exportTheme = theme;
+        setExportTheme(theme);
+        await plugin.saveSettings();
+        await refreshPreview();
       },
     }}
   ></div>

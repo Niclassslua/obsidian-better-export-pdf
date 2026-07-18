@@ -6,7 +6,7 @@ import { mount, unmount } from "svelte";
 import i18n, { type Lang } from "./i18n";
 import type BetterExportPdfPlugin from "./main";
 import { renderMarkdown, type ParamType } from "./render";
-import { traverseFolder, getDerivedLightVars, injectLightVarsPatch, removeLightVarsPatch } from "./utils";
+import { traverseFolder } from "./utils";
 import ModalUI from "./components/ModalUI.svelte";
 
 export type PageSizeType = electron.PrintToPDFOptions["pageSize"];
@@ -89,17 +89,13 @@ export class ExportConfigModal extends Modal {
     this.contentEl.empty();
     this.containerEl.style.setProperty("--dialog-width", "60vw");
     this.titleEl.setText("Export to PDF");
-    const missingVars = getDerivedLightVars();
-    console.debug("检测到以下衍生变量在亮色主题下未重置，即将进行注入：", missingVars);
-    // 步骤 2：注入补丁样式
-    injectLightVarsPatch(missingVars);
     this.component = mount(ModalUI, {
       target: this.contentEl,
       props: {
         modal: this,
         plugin: this.plugin,
       },
-    });
+    }) as ModalUI;
   }
 
   onClose() {
@@ -109,7 +105,6 @@ export class ExportConfigModal extends Modal {
     }
     this.contentEl.empty();
     document.querySelectorAll(".print").forEach((el) => el.remove());
-    removeLightVarsPatch();
   }
 
   // ── File rendering ──────────────────────────────────────
@@ -187,9 +182,9 @@ export class ExportConfigModal extends Modal {
     for (const { doc } of docs) {
       const element = doc.querySelector(".markdown-preview-view");
       if (element) {
-        const section = doc0.createElement("section");
+        const section = (doc0 as Document).createElement("section");
         Array.from(element.children).forEach((child) => {
-          section.appendChild(doc0.importNode(child, true));
+          section.appendChild((doc0 as Document).importNode(child, true));
         });
         sections.push(section);
       }
@@ -205,7 +200,9 @@ export class ExportConfigModal extends Modal {
   }
 
   mergeDocV2(docs: DocV2Type[]): DocV2Type[] {
-    const printEl = document.body.createDiv("print");
+    const sourceRoot = docs[0]?.doc;
+    const themeClass = sourceRoot?.classList.contains("theme-dark") ? "theme-dark" : "theme-light";
+    const printEl = document.body.createDiv(`print ${themeClass}`);
 
     for (const { doc } of docs) {
       const viewEl = doc.querySelector(".markdown-preview-view");

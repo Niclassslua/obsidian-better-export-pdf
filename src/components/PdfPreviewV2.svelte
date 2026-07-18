@@ -64,6 +64,7 @@
           app: modal.app,
           file: param.file,
           config,
+          exportTheme: settings.exportTheme,
         });
         cb?.(i);
         return res;
@@ -160,7 +161,7 @@
     await mutex.run(async () => {
       // 防止标题污染, 同一时间只有一个PDF被渲染
       document.title = title;
-      await printToPdf(el, pdfOptions);
+      await printToPdf(el, pdfOptions, settings.exportTheme ?? "light", modal.app);
     });
     if (onlyPreview) {
       return;
@@ -283,7 +284,7 @@
       }
     }
 
-    const key = JSON.stringify(config);
+    const key = JSON.stringify({ config, exportTheme: settings.exportTheme, printBackground: settings.printBackground });
     if (!pdfCaches[key]) {
       // 生成一个唯一的文件名
 

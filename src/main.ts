@@ -2,6 +2,7 @@ import { App, MarkdownView, Menu, Plugin, type PluginManifest, TFile, TFolder } 
 import i18n, { type Lang } from "./i18n";
 import { ExportConfigModal, type ExportConfigType } from "./modal";
 import ConfigSettingTab from "./setting";
+import { setExportTheme } from "./render";
 import { traverseFolder } from "./utils";
 const fs = require("fs").promises;
 import path from "path";
@@ -29,6 +30,7 @@ export interface BetterExportPdfPluginSettings {
   enabledCss: boolean;
   concurrency: string;
   version: string;
+  exportTheme: "light" | "dark";
 }
 
 const DEFAULT_SETTINGS: BetterExportPdfPluginSettings = {
@@ -49,10 +51,11 @@ const DEFAULT_SETTINGS: BetterExportPdfPluginSettings = {
   enabledCss: false,
   concurrency: "5",
   version: "2",
+  exportTheme: "light",
 };
 
 export default class BetterExportPdfPlugin extends Plugin {
-  settings: BetterExportPdfPluginSettings;
+  settings!: BetterExportPdfPluginSettings;
   i18n: Lang;
 
   constructor(app: App, manifest: PluginManifest) {
@@ -62,6 +65,7 @@ export default class BetterExportPdfPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings();
+    setExportTheme(this.settings.exportTheme ?? "light");
 
     this.registerCommand();
     this.registerSetting();
@@ -81,7 +85,7 @@ export default class BetterExportPdfPlugin extends Plugin {
         if (checking) {
           return true;
         }
-        new ExportConfigModal(this, file).open();
+        new ExportConfigModal(this, file as TFile | TFolder).open();
 
         return true;
       },
@@ -113,7 +117,7 @@ export default class BetterExportPdfPlugin extends Plugin {
   registerEvents() {
     // Register the Export As HTML button in the file menu
     this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file: TFile | TFolder) => {
+      this.app.workspace.on("file-menu", (menu, file) => {
         let title = file instanceof TFolder ? "Export folder to PDF" : "Better Export PDF";
         if (isDev) {
           title = `${title} (dev)`;
@@ -125,13 +129,13 @@ export default class BetterExportPdfPlugin extends Plugin {
             .setIcon("download")
             .setSection("action")
             .onClick(async () => {
-              new ExportConfigModal(this, file).open();
+              new ExportConfigModal(this, file as TFile | TFolder).open();
             });
         });
       }),
     );
     this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file: TFile | TFolder) => {
+      this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof TFolder) {
           let title = "Export to PDF...";
           if (isDev) {

@@ -66,7 +66,7 @@
 
     const inputs = data.map((param, i) =>
       limit(async () => {
-        const option = { ...param, config: currentConfig };
+        const option = { ...param, config: currentConfig, exportTheme: settings.exportTheme };
         const res = await renderMarkdown(option);
         cb?.(i);
         return res;
@@ -165,7 +165,7 @@
           console.warn(error);
         }
       }
-      await preview.executeJavaScript(makeWebviewJs(docObj.doc));
+      await preview.executeJavaScript(makeWebviewJs(docObj.doc, settings.exportTheme ?? "light"));
       getPatchStyle().forEach(async (css) => {
         await preview.insertCSS(css);
       });
@@ -225,7 +225,7 @@
           src="app://obsidian.md/help.html"
           nodeintegration={true}
           class="print-preview-container"
-          style="--modal-scale: {scale};"
+          style="height:calc({scale} * 100%); width:calc({scale} * 100%); transform:scale({1 / scale}); transform-origin:top left;"
           use:initWebviewEvents={item}
         ></webview>
       </div>

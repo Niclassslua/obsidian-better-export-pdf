@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, TextAreaComponent } from "obsidian";
 import i18n, { type Lang } from "./i18n";
 import BetterExportPdfPlugin from "./main";
+import { setExportTheme } from "./render";
 
 function setAttributes(element: HTMLTextAreaElement, attributes: { [x: string]: string }) {
   for (const key in attributes) {
@@ -77,6 +78,22 @@ export default class ConfigSettingTab extends PluginSettingTab {
           this.plugin.saveSettings();
         }),
     );
+
+    new Setting(containerEl)
+      .setName("Export theme")
+      .setDesc("Theme applied to exported PDFs. Dark keeps the vault's dark styling including page background.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("light", "Light")
+          .addOption("dark", "Dark")
+          .setValue(this.plugin.settings.exportTheme ?? "light")
+          .onChange(async (value: string) => {
+            const theme = value === "dark" ? "dark" : "light";
+            this.plugin.settings.exportTheme = theme;
+            setExportTheme(theme);
+            await this.plugin.saveSettings();
+          }),
+      );
 
     new Setting(containerEl)
       .setName(this.i18n.settings.printBackground)
