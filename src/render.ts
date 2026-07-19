@@ -62,6 +62,22 @@ export function applyPrintThemeStyle(themeRoot: HTMLElement, theme: ExportTheme)
   doc.getElementById(PRINT_THEME_STYLE_ID)?.remove();
   const style = doc.createElement("style");
   style.id = PRINT_THEME_STYLE_ID;
+
+  // Obsidian's own @media print CSS sets `.theme-dark { --highlight-mix-blend-mode: darken; }`,
+  // assuming print output is always on a light/white page. Callouts (and highlighted
+  // text) render their tinted background via `mix-blend-mode: var(--callout-blend-mode)`,
+  // which resolves from that same variable. "darken" against an already-dark export
+  // background crushes the tint toward black, making callouts render as a near-invisible
+  // blank box instead of their colored accent. For dark exports, re-assert "lighten"
+  // (the value used on screen in dark mode) with enough specificity (body.theme-dark)
+  // to win over Obsidian's plain `.theme-dark` print rule.
+  const calloutBlendModeFix =
+    theme === "dark"
+      ? `body.theme-dark {
+      --highlight-mix-blend-mode: lighten;
+    }`
+      : "";
+
   style.textContent = `
     .print.theme-${theme},
     .print.theme-${theme} .markdown-preview-view,
@@ -69,6 +85,7 @@ export function applyPrintThemeStyle(themeRoot: HTMLElement, theme: ExportTheme)
       background-color: var(--background-primary);
       color: var(--text-normal);
     }
+    ${calloutBlendModeFix}
   `;
   doc.head.appendChild(style);
   return style;
